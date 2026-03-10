@@ -1,0 +1,164 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(WORKER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attendances Attendance[]
+  dprs        DPR[]
+  projects    ProjectMember[]
+
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  WORKER
+}
+
+model Project {
+  id          Int           @id @default(autoincrement())
+  name        String
+  description String?
+  location    String
+  status      ProjectStatus @default(ONGOING)
+  startDate   DateTime
+  endDate     DateTime?
+  budget      Decimal       @db.Decimal(15, 2)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  members     ProjectMember[]
+  dprs        DPR[]
+  attendances Attendance[]
+  materials   Material[]
+  invoices    Invoice[]
+
+  @@map("projects")
+}
+
+enum ProjectStatus {
+  PLANNING
+  ONGOING
+  ON_HOLD
+  COMPLETED
+}
+
+model ProjectMember {
+  id        Int     @id @default(autoincrement())
+  projectId Int
+  userId    Int
+  role      String
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+model DPR {
+  id          Int      @id @default(autoincrement())
+  projectId   Int
+  submittedBy Int
+  date        DateTime @db.Date
+  workDone    String   @db.Text
+  issues      String?  @db.Text
+  nextPlan    String?  @db.Text
+  weatherCond String?
+  createdAt   DateTime @default(now())
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  submitter User    @relation(fields: [submittedBy], references: [id])
+
+  @@map("dprs")
+}
+
+model Attendance {
+  id        Int              @id @default(autoincrement())
+  projectId Int
+  userId    Int
+  date      DateTime         @db.Date
+  status    AttendanceStatus @default(PRESENT)
+  checkIn   DateTime?
+  checkOut  DateTime?
+  createdAt DateTime         @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId, date])
+  @@map("attendances")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  ON_LEAVE
+}
+
+model Material {
+  id          Int            @id @default(autoincrement())
+  projectId   Int
+  name        String
+  unit        String
+  quantity    Decimal        @db.Decimal(10, 2)
+  usedQty     Decimal        @default(0) @db.Decimal(10, 2)
+  unitCost    Decimal        @db.Decimal(10, 2)
+  status      MaterialStatus @default(IN_STOCK)
+  requestedAt DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("materials")
+}
+
+enum MaterialStatus {
+  REQUESTED
+  APPROVED
+  IN_STOCK
+  DEPLETED
+}
+
+model Invoice {
+  id          Int           @id @default(autoincrement())
+  projectId   Int
+  invoiceNo   String        @unique
+  amount      Decimal       @db.Decimal(15, 2)
+  tax         Decimal       @default(0) @db.Decimal(5, 2)
+  totalAmount Decimal       @db.Decimal(15, 2)
+  status      InvoiceStatus @default(PENDING)
+  dueDate     DateTime
+  paidAt      DateTime?
+  description String?       @db.Text
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("invoices")
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}

@@ -57,7 +57,7 @@ construction-site-api/
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/YOUR_USERNAME/construction-site-api.git
+git clone https://github.com/saurabhrdj50/construction-site-api.git
 cd construction-site-api
 ```
 
